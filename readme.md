@@ -1,10 +1,7 @@
+Following is not entirely written by me and I am lazy to edit it.
+
 Ini streaming parser
 ====================
-
-[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![crates.io](https://img.shields.io/crates/v/ini_core.svg)](https://crates.io/crates/ini_core)
-[![docs.rs](https://docs.rs/ini_core/badge.svg)](https://docs.rs/ini_core)
-[![Build status](https://github.com/CasualX/ini_core/workflows/CI/badge.svg)](https://github.com/CasualX/ini_core/actions)
 
 Compatible with `no_std`.
 
@@ -18,24 +15,19 @@ use ini_core as ini;
 
 let document = "\
 [SECTION]
-;this is a comment
+# this is a comment
 Key=Value";
 
 let elements = [
-	ini::Item::SectionEnd,
 	ini::Item::Section("SECTION"),
 	ini::Item::Comment("this is a comment"),
-	ini::Item::Property("Key", Some("Value")),
-	ini::Item::SectionEnd,
+	ini::Item::Property("Key", "Value"),
 ];
 
-for (index, item) in ini::Parser::new(document).enumerate() {
-	assert_eq!(item, elements[index]);
+for (line, item) in ini::Parser::new(document).enumerate() {
+	assert_eq!(item, elements[line]);
 }
 ```
-
-The `SectionEnd` pseudo element is returned before a new section and at the end of the document.
-This helps processing sections after their properties finished parsing.
 
 The parser is very much line-based, it will continue no matter what and return nonsense as an item:
 
@@ -47,29 +39,27 @@ let document = "\
 nonsense";
 
 let elements = [
-	ini::Item::SectionEnd,
 	ini::Item::Error("[SECTION"),
-	ini::Item::Property("nonsense", None),
-	ini::Item::SectionEnd,
+	ini::Item::Action("nonsense"),
 ];
 
-for (index, item) in ini::Parser::new(document).enumerate() {
-	assert_eq!(item, elements[index]);
+for (line, item) in ini::Parser::new(document).enumerate() {
+	assert_eq!(item, elements[line]);
 }
 ```
 
 Lines starting with `[` but contain either no closing `]` or a closing `]` not followed by a newline are returned as `Item::Error`.
-Lines missing a `=` are returned as `Item::Property` with `None` value.
+Lines missing a `=` or starting with `'` or `"` are returned as `Item::Action`.
 
 Format
 ------
 
-INI is not a well specified format, this parser tries to make as little assumptions as possible but it does make decisions.
+This fork adds some thinking of its own to unspecified abstract INI format.
 
 * Newline is either `"\r\n"`, `"\n"` or `"\r"`. It can be mixed in a single document but this is not recommended.
 * Section header is `"[" section "]" newline`. `section` can be anything except contain newlines.
 * Property is `key "=" value newline`. `key` and `value` can be anything except contain newlines.
-* Comment is `";" comment newline` and Blank is just `newline`. The comment character can be customized.
+* Comment is `"[ # | / | \ |]" comment newline` and Blank is just `newline`. The comment character can be customized.
 
 Note that padding whitespace is not trimmed by default:
 Section `[ SECTION ]`'s name is `<space>SECTION<space>`.
@@ -81,7 +71,9 @@ No further processing of the input is done, eg. if escape sequences are necessar
 Performance
 -----------
 
-Tested against the other INI parsers available on crates.io. Fair warning all parsers except `light_ini` use a document model which allocate using `HashMap` and `String` which isn't exactly fair... In any case `ini_core` still mops the floor with `light_ini` which is a callback-based streaming parser.
+# Unchecked for now.
+
+Tested against the other INI parsers available on crates.io. Fair warning all parsers except `light_ini` use a document model which allocate using `HashMap` and `String` which isn't exactly fair... In any case `ini_core` still mops the floor with `light_ini` which is 2a callback-based streaming parser.
 
 These tests were run with `-C target-cpu=native` on an AMD Ryzen 5 3600X.
 
@@ -110,8 +102,6 @@ test tini         ... bench:     340,383 ns/iter (+/- 28,667) = 51 MB/s
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 5 measured; 0 filtered out; finished in 15.75s
 ```
-
-The competition is not even close. 😎
 
 License
 -------
