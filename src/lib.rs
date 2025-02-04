@@ -1,4 +1,3 @@
-#![feature(is_some_and)]
 /*!
 Ini streaming parser
 ====================
