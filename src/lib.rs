@@ -241,7 +241,7 @@ impl<'a> Iterator for Parser<'a> {
                 Some(Item::Blank)
             }
             // Comment
-            Some(b'#' | b'/' | b'\'' | b'"') => {
+            Some(b'#' | b'/' | b'\'' | b'"' | b';') => {
                 s = &s[1..];
                 let i = parse::find_nl(s);
                 unsafe_assert!(i <= s.len());
